@@ -3,8 +3,8 @@
 /* Define variables for root element.  */
 
 :root {
-  --primary-color: FEED01;
-  --secondary-color: #FEED01;
+  --primary-color: #560F40;
+  --secondary-color: #560F40;
   --page-background: ivory;
   --page-foreground: #333;
   }
