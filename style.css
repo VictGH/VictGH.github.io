@@ -107,7 +107,7 @@ nav a:hover {
   
 .hero h1 {
     color: var(--page-background);
-    font-size: 2em;
+    font-size: 4em;
     font-weight: 700;
     text-shadow: .1rem .1rem .8rem black;
     text-transform: uppercase;
