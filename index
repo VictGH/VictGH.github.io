@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mejiro Theme</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    
+<section>
+    <header>
+        <img class= "logo" src="images/home-alt.svg" alt="logo">
+        <input id="toggler" class="toggler" type="checkbox">
+        <label for="toggler" class="burger">
+            <span>☰</span>
+        </label>
+
+        <nav>
+            <ul>
+                <li><a href="#">Home</a></li>
+                <li><a href="#">About</a></li>
+                <li><a href="#">FAQ</a></li>
+                <li><a href="#">Contact</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <div class="hero">
+        <h1>This is a title</h1>
+        <p>This is a subtitle</p>
+    </div>
+    
+</section>
+
+<section id="maincontent">
+
+    <h2>This is a test of h2 heading</h2>
+    <p>Lorem ipsum dolor sit amet, consectetur <a href="#">link</a> adipiscing elit. Curabitur aliquet venenatis urna. Pellentesque fringilla sem lectus, vel maximus mi fermentum nec. Vivamus porttitor metus id lorem commodo, vitae porttitor ipsum vehicula. Etiam fringilla porta urna, quis finibus metus. Integer vulputate mollis dictum. Morbi lorem sapien, dignissim eget consequat ut, viverra ultricies augue. Donec ac sagittis elit. Donec fermentum turpis nec tortor ullamcorper tempor. Aenean semper dui in justo convallis aliquet. Aenean eget ipsum velit. Nulla eget felis finibus, porttitor lectus non, semper massa. </p>
+    
+    <h2>This is test of h2 heading</h2>
+    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur aliquet venenatis urna. Pellentesque fringilla sem lectus, vel maximus mi fermentum nec. Vivamus porttitor metus id lorem commodo, vitae porttitor ipsum vehicula. Etiam fringilla porta urna, quis finibus metus. Integer vulputate mollis dictum. Morbi lorem sapien, dignissim eget consequat ut, viverra ultricies augue. Donec ac sagittis elit. Donec fermentum turpis nec tortor ullamcorper tempor. Aenean semper dui in justo convallis aliquet. Aenean eget ipsum velit. Nulla eget felis finibus, porttitor lectus non, semper massa. </p>
+    
+    <h3>This is a test of h3 heading</h3>
+    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur aliquet venenatis urna. Pellentesque fringilla sem lectus, vel maximus mi fermentum nec. Vivamus porttitor metus id lorem commodo, vitae porttitor ipsum vehicula. Etiam fringilla porta urna, quis finibus metus. Integer vulputate mollis dictum. Morbi lorem sapien, dignissim eget consequat ut, viverra ultricies augue. Donec ac sagittis elit. Donec fermentum turpis nec tortor ullamcorper tempor. Aenean semper dui in justo convallis aliquet. Aenean eget ipsum velit. Nulla eget felis finibus, porttitor lectus non, semper massa. </p>
+    
+<img src="images/mejiro-wide.jpg" alt="wide image">
+
+    <h4>This is a test of h4 heading</h4>
+    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur aliquet venenatis urna. Pellentesque fringilla sem lectus, vel maximus mi fermentum nec. Vivamus porttitor metus id lorem commodo, vitae porttitor ipsum vehicula. Etiam fringilla porta urna, quis finibus metus. Integer vulputate mollis dictum. Morbi lorem sapien, dignissim eget consequat ut, viverra ultricies augue. Donec ac sagittis elit. Donec fermentum turpis nec tortor ullamcorper tempor. Aenean semper dui in justo convallis aliquet. Aenean eget ipsum velit. Nulla eget felis finibus, porttitor lectus non, semper massa. </p>
+    
+    <img src="images/mejiro-wide.jpg" alt="wide image" class="narrow_image">
+
+    <h4>This is another test of h4 heading</h4>
+    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur aliquet venenatis urna. Pellentesque fringilla sem lectus, vel maximus mi fermentum nec. Vivamus porttitor metus id lorem commodo, vitae porttitor ipsum vehicula. Etiam fringilla porta urna, quis finibus metus. Integer vulputate mollis dictum. Morbi lorem sapien, dignissim eget consequat ut, viverra ultricies augue. Donec ac sagittis elit. Donec fermentum turpis nec tortor ullamcorper tempor. Aenean semper dui in justo convallis aliquet. Aenean eget ipsum velit. Nulla eget felis finibus, porttitor lectus non, semper massa. </p>
+    
+</section>
+
+<footer>
+      <ul>
+        <li><a href="#">About</a></li>
+        <li><a href="#">Company</a></li>
+        <li><a href="#">FAQ</a></li>
+        <li><a href="#">Contact</a></li>
+      </ul>
+</footer>
+
+    
+
+
+
+
+</body>
+</html>
