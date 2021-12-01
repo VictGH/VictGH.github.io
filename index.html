@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4 Player Chess AI</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    
+<section>
+    <header>
+        <img class= "logo" src="images/home-alt.svg" alt="logo">
+        <input id="toggler" class="toggler" type="checkbox">
+        <label for="toggler" class="burger">
+            <span>☰</span>
+        </label>
+
+        <nav>
+            <ul>
+                <li><a href="#">Home</a></li>
+                <li><a href="#">About</a></li>
+                <li><a href="#">FAQ</a></li>
+                <li><a href="#">Contact</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <div class="hero">
+        <h1>4 Player Chess AI</h1>
+    </div>
+    
+</section>
+
+<section id="maincontent">
+
+    <h2>Rules and board</h2>
+    <p> This chess game consists of 4 players, each one starting with 3 knights.<b>One point is awarded for each piece taken.</b> The movement for each knight is the usual one for standard chess. each knight is indintinguishable form each other. There are three rules determining the end of a game. 
+    <br><br> <b>1.</b> If a player loses all three knights the game ends. <br> <b>2.</b> If all four players have exactly one knight remaining the game ends.  
+    <br><br> The result for each game is a vector with 4 components. While we can declare the winner as the player with more points, it is clear that a result of [5,0,0,0] is a greater win for player one than [5,2,0,0]. This will be used when evaluating the performance of our AI during training. 
+    <br><br> Let's lok at the board we will be playing with.</p>
+    
+    <h2>This is test of h2 heading</h2>
+    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur aliquet venenatis urna. Pellentesque fringilla sem lectus, vel maximus mi fermentum nec. Vivamus porttitor metus id lorem commodo, vitae porttitor ipsum vehicula. Etiam fringilla porta urna, quis finibus metus. Integer vulputate mollis dictum. Morbi lorem sapien, dignissim eget consequat ut, viverra ultricies augue. Donec ac sagittis elit. Donec fermentum turpis nec tortor ullamcorper tempor. Aenean semper dui in justo convallis aliquet. Aenean eget ipsum velit. Nulla eget felis finibus, porttitor lectus non, semper massa. </p>
+    
+    <h3>This is a test of h3 heading</h3>
+    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur aliquet venenatis urna. Pellentesque fringilla sem lectus, vel maximus mi fermentum nec. Vivamus porttitor metus id lorem commodo, vitae porttitor ipsum vehicula. Etiam fringilla porta urna, quis finibus metus. Integer vulputate mollis dictum. Morbi lorem sapien, dignissim eget consequat ut, viverra ultricies augue. Donec ac sagittis elit. Donec fermentum turpis nec tortor ullamcorper tempor. Aenean semper dui in justo convallis aliquet. Aenean eget ipsum velit. Nulla eget felis finibus, porttitor lectus non, semper massa. </p>
+    
+<img src="images/mejiro-wide.jpg" alt="wide image">
+
+    <h4>This is a test of h4 heading</h4>
+    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur aliquet venenatis urna. Pellentesque fringilla sem lectus, vel maximus mi fermentum nec. Vivamus porttitor metus id lorem commodo, vitae porttitor ipsum vehicula. Etiam fringilla porta urna, quis finibus metus. Integer vulputate mollis dictum. Morbi lorem sapien, dignissim eget consequat ut, viverra ultricies augue. Donec ac sagittis elit. Donec fermentum turpis nec tortor ullamcorper tempor. Aenean semper dui in justo convallis aliquet. Aenean eget ipsum velit. Nulla eget felis finibus, porttitor lectus non, semper massa. </p>
+    
+    <img src="images/mejiro-wide.jpg" alt="wide image" class="narrow_image">
+
+    <h4>This is another test of h4 heading</h4>
+    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur aliquet venenatis urna. Pellentesque fringilla sem lectus, vel maximus mi fermentum nec. Vivamus porttitor metus id lorem commodo, vitae porttitor ipsum vehicula. Etiam fringilla porta urna, quis finibus metus. Integer vulputate mollis dictum. Morbi lorem sapien, dignissim eget consequat ut, viverra ultricies augue. Donec ac sagittis elit. Donec fermentum turpis nec tortor ullamcorper tempor. Aenean semper dui in justo convallis aliquet. Aenean eget ipsum velit. Nulla eget felis finibus, porttitor lectus non, semper massa. </p>
+    
+</section>
+
+<footer>
+      <ul>
+        <li><a href="#">About</a></li>
+        <li><a href="#">Company</a></li>
+        <li><a href="#">FAQ</a></li>
+        <li><a href="#">Contact</a></li>
+      </ul>
+</footer>
+
+    
+
+
+
+
+</body>
+</html>
