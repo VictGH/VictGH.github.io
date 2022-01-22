@@ -1,0 +1,109 @@
+*
+{
+  padding: 0px;
+  margin: 5px;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+  background-color: #CDF4FC;
+}
+
+#stage 
+{
+  position: relative;
+  width: 100%;
+  height: 414px;
+  margin-top: 50px;
+ 
+}
+
+canvas
+{
+  display: block;
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  cursor: default;
+  
+
+    margin-right: auto;
+
+  
+
+		
+}
+
+@font-face 
+{
+  font-family: Vanilla;
+  src: "fractal-chess.jpg";
+}
+
+p
+{
+  font-family: Vanilla;
+  font-size: 20px;
+  padding: 20px;
+}
+
+.container {
+  height: 300px;
+  
+}
+
+.container img {
+  height:100%;
+  width: 100%;
+  object-fit: cover;
+  object-position: -50% 40%;
+}
+
+.button {
+  
+  border: none;
+  color: black;
+  padding: 15px 32px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+  width:270px;
+  cursor: pointer
+}
+
+.button1{
+background-color: #F22B2B; /* Green */
+border-radius: 8px;
+border: 2px solid #000000;
+font-weight: 700;
+
+}
+
+.button2{
+background-color: #4CAF50; /* Red */
+border-radius: 8px;
+border: 2px solid #000000;
+font-weight: 700;
+}
+
+.button3{
+background-color: #2B3DF2; /* Blue */
+border-radius: 8px;
+border: 2px solid #000000;
+font-weight: 700;
+}
+
+.button4{
+background-color: #F2F43C; /* Yellow */
+border-radius: 8px;
+border: 2px solid #000000;
+font-weight: 700;
+}
+
+.button5{
+background-color: #F43CE7; /* Green */
+border-radius: 8px;
+width:360px;
+border: 2px solid #000000;
+font-weight: 700;
+}
