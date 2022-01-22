@@ -1,0 +1,1624 @@
+<!doctype html>
+<title>4 chess AI player</title>
+<link rel="stylesheet" href="monsterSmash.css">
+
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/9.4.4/math.js" 
+integrity="sha512-XTa+nLKjbTCUazCWzwYpykjsTQDaepuKlg9YToCij7+Bdi9aHQhBQlV0rfnYmactJjHdusRQQV+6qWNNv0BScA==" 
+crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.9.0/dist/tf.min.js"></script>
+
+<div class="container">
+  <img src="fractal-flower3.png" alt="wide image" />
+</div>
+
+<section id="maincontent">
+
+
+
+    <h2>Rules and board</h2>
+    <p> This chess game consists of 4 players, each one starting with 3 knights.<b>One point is awarded for each piece taken.</b> The movement for each knight is the usual one for standard chess. each knight is indintinguishable form each other. There are three rules determining the end of a game. 
+    <br><br> <b>1.</b> If a player loses all three knights the game ends. <br> <b>2.</b> If all four players have exactly one knight remaining the game ends.  
+    <br><br> The result for each game is a vector with 4 components. While we can declare the winner as the player with more points, it is clear that a result of [5,0,0,0] is a greater win for player one than [5,2,0,0]. This will be used when evaluating the performance of our AI during training. 
+    <br><br> Let's lok at the board we will be playing with.</p>
+    
+        
+<button class = "button button1" onclick="reset(0)">Reset and play as red!</button>
+<button class = "button button2" onclick="reset(1)">Reset and play as green!</button>
+<button class = "button button3" onclick="reset(2)">Reset and play as blue!</button>
+<button class = "button button4" onclick="reset(3)">Reset and play as yellow!</button>
+<button class = "button button5" onclick="reset(4)">Let the computer play against itself!</button>
+    
+</section>
+<div id="stage"></div>
+
+<script>
+console.log($("#stage").width());
+var reset2;
+var update2;
+var play_as = 0;
+console.log
+
+//the remove function
+function removeItemAll(arr, value) {
+  var i = 0;
+  while (i < arr.length) {
+    if (arr[i] === value) {
+      arr.splice(i, 1);
+    } else {
+      ++i;
+    }
+  }
+  return arr;
+}
+//load the model
+var model_loaded = false;
+async function loadModel() {
+    
+    model = await tf.loadLayersModel("http://127.0.0.1:8887/patata5/model.json");
+
+   //console.log( `This is a ${pred.arraySync()}`)
+
+}
+
+
+//--- The monster object
+
+var player = 
+{
+ points:0
+ }
+var monster =
+{
+ //The size of each frame on the tilesheet and the tilesheet's number of columns
+ IMAGE: "canvas.png",
+ SIZE: 120,
+ ROWS:3,
+ COLUMNS: 8,
+ //The numbers of the animation frames and the starting frame
+ //numberOfFrames: 5,
+ prevframe:0,
+ currentframe: 0,
+ prevframe:0,
+ //Properties of the animation frames's X and Y positions on the tilesheet.
+ //They're 0 when this object first loads
+ sourceX: 0,
+ sourceY: 0,
+ //A property to control the loop
+ forward: true,
+ orange:0,
+ purple:0,
+ //The monster's updateAnimation method
+ updateAnimation: function(cell)
+ {if (this.currentframe==20){this.currentframe = (16+cell%2);}
+ 
+ if(this.currentframe>=0 && this.currentframe<4){this.currentframe = (this.currentframe+4*(cell%2));}
+
+ this.sourceX
+ = Math.floor(this.currentframe % this.COLUMNS) * this.SIZE;
+ this.sourceY
+ = Math.floor(this.currentframe / this.COLUMNS) * this.SIZE;
+ }
+ };
+
+
+//random numbers
+function randn_bm() {
+    var u = 0, v = 0;
+    while(u === 0) u = Math.random(); //Converting [0,1) to (0,1)
+    while(v === 0) v = Math.random();
+    return Math.sqrt( -2.00 * Math.log( u ) ) * Math.cos( 2.0 * Math.PI * v );
+}
+
+//Where in the matrix
+
+function where(matrix,element){
+	
+var lista  =[];
+for (i = 0; i < 5; i++) {
+  for (j = 0; j < 5; j++) {
+  if(matrix[i][j]==element){lista.push([i,j]);}
+}
+}
+return lista;
+}
+
+function where25(matrix,element){
+	
+var lista  =[];
+for (i = 0; i < 5; i++) {
+  for (j = 0; j < 5; j++) {
+  if(matrix[i][j]==element){lista.push(i*5+j);}
+}
+}
+return lista;
+}
+
+
+//valid moves
+
+function getValidMoves(board,player){
+        var moves = [];
+        var n = 5;
+       
+        var t = where25(board,player);
+        var s = where(board,player);
+        t.push(0);
+        t.push(4);
+        t.push(20);
+        t.push(24);
+
+       
+        for (i = 0; i < s.length; i++) {
+        	
+            if (s[i][1]+1<n && s[i][0]-2>=0 && (!t.includes((s[i][0]-2)*5+s[i][1]+1)))
+            	{moves.push(0*n**2+s[i][0]*n+s[i][1]);}
+            if (s[i][1]+2<n && s[i][0]-1>=0 && (!t.includes((s[i][0]-1)*5+s[i][1]+2)))
+            	{moves.push(1*n**2+s[i][0]*n+s[i][1]);}
+            if (s[i][1]+2<n && s[i][0]+1<n && (!t.includes((s[i][0]+1)*5+s[i][1]+2)))
+            	{moves.push(2*n**2+s[i][0]*n+s[i][1]);}
+            if (s[i][1]+1<n && s[i][0]+2<n && (!t.includes((s[i][0]+2)*5+s[i][1]+1)))
+            	{moves.push(3*n**2+s[i][0]*n+s[i][1]);}
+            if (s[i][1]-1>=0 && s[i][0]+2<n && (!t.includes((s[i][0]+2)*5+s[i][1]-1)))
+            	{moves.push(4*n**2+s[i][0]*n+s[i][1]);}
+            if (s[i][1]-2>=0 && s[i][0]+1<n && (!t.includes((s[i][0]+1)*5+s[i][1]-2)))
+            	{moves.push(5*n**2+s[i][0]*n+s[i][1]);}
+            if (s[i][1]-2>=0 && s[i][0]-1>=0 && (!t.includes((s[i][0]-1)*5+s[i][1]-2)))
+            	{moves.push(6*n**2+s[i][0]*n+s[i][1]);}
+            if (s[i][1]-1>=0 && s[i][0]-2>=0 && (!t.includes((s[i][0]-2)*5+s[i][1]-1)))
+            	{moves.push(7*n**2+s[i][0]*n+s[i][1]);}
+        }
+        return moves
+}
+
+class wrapper {
+ constructor (model) {
+ 	this.model = model;
+ 	}
+	predict(board,story,player,points){
+	var t = story[board];
+	var t2 = math.dotMultiply(math.ones([5,5]), t);
+	
+	var y = math.dotMultiply(math.ones([5,5]), player);
+	
+	var q = [0,0,0,0];
+	for (i = 0; i < 4; i++){
+		q[i] = math.dotMultiply(math.ones([5,5]), points[i]);}
+	var data_in_line = [board[0],board[1],board[2],board[3],t2,y,q[0],q[1],q[2],q[3]];
+	var data_stack = math.zeros([1,5,5,10]);
+	
+	for (i=0;i<5;i++){
+	
+		for(j=0;j<5;j++){
+			
+			for(var k=0;k<10;k++){
+				data_stack[0][i][j][k] = data_in_line[k][i][j];}}}
+				
+	let z = this.model.predict(tf.tensor(data_stack));
+	 
+	var d1 = z[0].arraySync();
+    var d2 = z[1].arraySync();
+    	
+	return [d1,d2];
+	}
+
+}
+	
+//function  MCTS
+class MCTS {
+ constructor (game,wrapper) {
+ 	this.game = game;
+ 	this.wrapper = wrapper;
+    this.Qsa = {};
+    this.Nsa = {};
+    this.Ns = {};
+    this.Ps = {};
+    this.Es = {};
+    this.Vs = {};
+    this.MCTSsims = 50;
+}
+	getActionProb(canonicalBoard,story,player,points,temp=1)
+	{
+	
+	
+    var zplayer = player;
+    var epsilon = 0.0;
+    var dirich = [];
+    var j;
+    for (j = 0; j < 200; j++) {
+    	dirich.push(randn_bm());
+    }
+    var valids = getValidMoves(math.add(canonicalBoard[0],math.dotMultiply(canonicalBoard[1],2),
+    	math.dotMultiply(canonicalBoard[2],3),math.dotMultiply(canonicalBoard[3],4)),player+1);
+    var dirich2 = Array(200).fill(0);
+    for (j = 0; j < 200; j++) {
+    	if(valids.includes(j)){dirich2[j]=dirich[j];}
+    	}
+ 
+    var suma_dirich2 = dirich2.reduce((a, b) => a + b, 0);
+    for(var i = 0;  i < 200; i++){
+    dirich2[i] = dirich2[i]/suma_dirich2;}
+    var t = $.extend( true, [], canonicalBoard );
+    var s = [t,story[t],player];
+    var aux = this.wrapper.predict(canonicalBoard,story,player,points);
+   
+    this.Ps[zplayer][s] =aux[0][0];
+    var v1 = aux[1][0];
+ 
+    for (var j =0;j<200;j++){if (valids.includes(j)==false){this.Ps[zplayer][s][j]=0;}}
+    var suma_aux = this.Ps[zplayer][s].reduce((a, b) => a + b, 0);
+    for (var j =0;j<200;j++){this.Ps[zplayer][s][j] = this.Ps[zplayer][s][j]/suma_aux;}
+    this.Vs[zplayer][s] = valids;
+    this.Ns[zplayer][s] = 0;
+    for (var j =0;j<200;j++){this.Ps[zplayer][s][j] = this.Ps[zplayer][s][j]*(1-epsilon)+dirich2[j]*epsilon;}
+    
+    for (var i=0;i<this.MCTSsims;i++){
+    	var gstory = $.extend( true, {}, story );
+    	var soints = $.extend( true, [], points );
+    	var sanonicalBoard = $.extend( true, [], canonicalBoard );
+    	var depth = 0;
+    	this.search(sanonicalBoard,depth,gstory,player,zplayer,soints);
+    }
+    	
+    var t = $.extend( true, [], canonicalBoard );
+    var s = [t,story[t],player];
+    var counts = Array(200).fill(0);
+    for (j = 0; j < 200; j++) {
+     	 if(this.Nsa[zplayer].hasOwnProperty([s,j])){counts[j] = this.Nsa[zplayer][[s,j]];}
+    	}
+    if (temp ==0){const max = Math.max(...counts);
+    	var bestAs = [];
+    	counts.forEach((item, index) => item === max ? bestAs.push(index): null);
+    var bestA  = bestAs[Math.floor(Math.random() * bestAs.length)];
+    var probs =  Array(200).fill(0);
+    probs[bestA] =1;
+    }
+    counts = counts.map(function(e) { 
+    return e**(1.0/temp);});
+    var suma_counts = counts.reduce((a, b) => a + b, 0);
+    for(var i = 0; i < 200; i++){
+    counts[i] = counts[i]/suma_counts;}
+    return counts}
+    
+    
+    search(canonicalBoard,d,story,player,zplayer,points){
+    d = d+1;
+    var t = $.extend( true, [], canonicalBoard );
+    var s = [t,story[t],player];
+    if (! this.Es[zplayer].hasOwnProperty(s)){
+    	this.Es[zplayer][s] = this.game.gameEnded(canonicalBoard,story,points)[0];
+    }
+    if(this.game.gameEnded(canonicalBoard,story,points)[1]!=0){
+    return this.Es[zplayer][s];}
+    if (! this.Ps[zplayer].hasOwnProperty(s)){
+    var aux_result = this.wrapper.predict(canonicalBoard,story,player,points);
+
+    this.Ps[zplayer][s] = aux_result[0][0];
+    var v = aux_result[1][0];
+    
+   
+    var valids = getValidMoves(math.add(canonicalBoard[0],math.dotMultiply(canonicalBoard[1],2),
+    	math.dotMultiply(canonicalBoard[2],3),math.dotMultiply(canonicalBoard[3],4)),player+1);
+    
+    for (j=0;j<200;j++){if(!valids.includes(j)){this.Ps[zplayer][s][j]=0;}}
+    var suma_aux = this.Ps[zplayer][s].reduce((a, b) => a + b, 0);
+    if (suma_aux>0){
+    for (var j =0;j<200;j++){this.Ps[zplayer][s][j] = this.Ps[zplayer][s][j]/suma_aux;}
+    }
+    
+    if (suma_aux==0){console.log('all moves where masked');}
+    this.Vs[zplayer][s]=valids;
+    this.Ns[zplayer][s] = 0;
+    return v;
+    }
+    
+    valids = this.Vs[zplayer][s];
+    var cur_best = -10000000000;
+    var best_act = -1;
+    var cpuct = 1;
+    for (var j=0;j< valids.length;j++){
+    	var ab = valids[j];
+    	
+    	
+    	if(this.Qsa[zplayer].hasOwnProperty([s,ab])){
+    		
+    		
+    	var u = this.Qsa[zplayer][[s, ab]] + cpuct * this.Ps[zplayer][s][ab] * math.sqrt(this.Ns[zplayer][s]) / (
+                        1 + this.Nsa[zplayer][[s, ab]]);
+        
+    	}
+    	if(!this.Qsa[zplayer].hasOwnProperty([s,ab])){
+    	
+    	
+    	var u = cpuct * this.Ps[zplayer][s][ab] * math.sqrt(this.Ns[zplayer][s]+10**(-8));
+    	}
+    	
+    	if (u> cur_best){cur_best = u;
+    	best_act = ab;}
+    	
+    	
+    }
+    var a = best_act;
+    if(!valids.includes(a)){console.log('action is not valid');
+    		console.log(d,a,player,valids,canonicalBoard);
+    		
+    		/* parte roja*/
+    		    for (var j=0;j< valids.length;j++){
+    	var ab = valids[j];
+    	
+    	
+    	
+    	if(this.Qsa[zplayer].hasOwnProperty([s,ab])){
+    	console.log(ab,this.Qsa[zplayer][[s, ab]],this.Ps[zplayer][s][ab],this.Ns[zplayer][s],this.Nsa[zplayer][[s, ab]]);	
+    		
+    	var u = this.Qsa[zplayer][[s, ab]] + cpuct * this.Ps[zplayer][s][ab] * math.sqrt(this.Ns[zplayer][s]) / (
+                        1 + this.Nsa[zplayer][[s, ab]]);
+        
+    	}
+    	if(!this.Qsa[zplayer].hasOwnProperty([s,ab])){
+    	
+    	
+    	var u = cpuct * this.Ps[zplayer][s][ab] * math.sqrt(this.Ns[zplayer][s]+10**(-8));
+    	console.log(ab,this.Ps[zplayer][s][ab],this.Ns[zplayer][s]);
+    	}
+    
+    	if (u> cur_best){cur_best = u;
+    	best_act = ab;}
+    	/* parte roja*/
+    	
+    		
+    }}
+    
+    var next_state = this.game.get_nextState(canonicalBoard,player,a,story,points);
+    var acanonicalBoard = next_state[0];
+    var aplayer = next_state[1];
+    var astory = next_state[2];
+    var apoints = next_state[3];
+  
+    var v = this.search(acanonicalBoard,d,astory,aplayer,zplayer,apoints);
+    
+    if (this.Qsa[zplayer].hasOwnProperty([s,a]))
+    	{this.Qsa[zplayer][[s,a]]= (this.Nsa[zplayer][[s,a]] * this.Qsa[zplayer][[s,a]] - v.reduce((a, b) => a + b, 0) +2*v[player])/(
+    			this.Nsa[zplayer][[s,a]]+1);
+    	this.Nsa[zplayer][[s,a]] = this.Nsa[zplayer][[s,a]]+1;}
+    
+    if (!this.Qsa[zplayer].hasOwnProperty([s,a])){
+    
+    this.Qsa[zplayer][[s,a]]= - v.reduce((a, b) => a + b, 0) +2*v[player];
+    this.Nsa[zplayer][[s,a]] =1;
+    }
+    this.Ns[zplayer][s] = this.Ns[zplayer][s]+1;
+    return v;}
+    
+}
+
+
+
+//Class game
+class Structure {
+ constructor (rows = 5) {
+ 	this.rows = rows;
+ }
+ gameEnded(board,story,points){
+ 	 if(story[board]>=3){
+ 	 return [points,1];}
+ 	 
+ 	 var number_pieces1 = 0;
+ 	 for (var j=0;j<board[0].length;j++){number_pieces1 = 
+ 	 number_pieces1+board[0][j].filter((va) => (va === 1)).length;}
+ 	 if(number_pieces1==0){return [points,1];}
+ 	 
+ 	 var number_pieces2 = 0;
+ 	 for (var j=0;j<board[1].length;j++){number_pieces2 = 
+ 	 number_pieces2+board[1][j].filter((va) => (va === 1)).length;}
+ 	 if(number_pieces2==0){return [points,1];}
+ 	 
+ 	 var number_pieces3 = 0;
+ 	 for (var j=0;j<board[2].length;j++){number_pieces3 = 
+ 	 number_pieces3+board[2][j].filter((va) => (va === 1)).length;}
+ 	 if(number_pieces3==0){return [points,1];}
+ 	 
+ 	 var number_pieces4 = 0;
+ 	 for (var j=0;j<board[3].length;j++){number_pieces4 = 
+ 	 number_pieces4+board[3][j].filter((va) => (va === 1)).length;}
+ 	 if(number_pieces4==0){return [points,1];}
+ 	 
+ 	 if(number_pieces1 ==1  && number_pieces2 ==1 && number_pieces3 ==1  && number_pieces4 ==1)
+ 	 	 {return [points,1];}
+ 	 else {return [points,0];}
+ 	 }
+ 	getInitBoard(){ 
+ 		var b = math.zeros([4,5,5]);
+ 		b[0][3][2] = 1;
+        b[0][4][1] = 1;
+        b[0][4][3] = 1;
+        
+        b[1][1][4] = 1;
+        b[1][2][3] = 1;
+        b[1][3][4] = 1;
+        
+        b[2][0][1] = 1;
+        b[2][0][3] = 1;
+        b[2][1][2] = 1;
+        
+        b[3][1][0] = 1;
+        b[3][3][0] = 1;
+        b[3][2][1] = 1;
+        
+      
+    return b;}
+    
+    get_nextState(canonicalBoard, player, move,story,points){
+    
+        var n= 5; 
+        var initial_col = move%n;
+        var move2 = math.floor(move/n);
+        var initial_row = move2%n;
+        move2 =  math.floor(move2/n);
+        if (move2 ==0){
+        	var final_row = initial_row-2;
+        	var final_col = initial_col+1;
+        }
+        if (move2 ==1){
+        	var final_row = initial_row-1;
+        	var final_col = initial_col+2;
+        }
+        if (move2 ==2){
+        	var final_row = initial_row+1;
+        	var final_col = initial_col+2;
+        } 
+        if (move2 ==3){
+        	var final_row = initial_row+2;
+        	var final_col = initial_col+1;
+        }
+        if (move2 ==4){
+        	var final_row = initial_row+2;
+        	var final_col = initial_col-1;
+        }
+        if (move2 ==5){
+        	var final_row = initial_row+1;
+        	var final_col = initial_col-2;
+        }
+        if (move2 ==6){
+        	var final_row = initial_row-1;
+        	var final_col = initial_col-2;
+        }
+       if (move2 ==7){
+        	var final_row = initial_row-2;
+        	var final_col = initial_col-1;
+        }
+        var points2 = $.extend( true, [], points );
+        var y = $.extend( true, [], canonicalBoard );
+        
+     
+        y[player][initial_row][initial_col]=0;
+        y[player][final_row][final_col]=1;
+        for (var zz=0;zz<4;zz++){
+        if (zz!=player)
+        	{
+        	if (y[zz][final_row][final_col] ==1)
+        		{points2[player]+=1;
+        		y[zz][final_row][final_col] =0;
+        		break;
+        		
+        		}
+        	}
+        } 
+            
+        if (story.hasOwnProperty(y)){
+        story[y]+=1;
+        }
+        else {story[y]=1;}
+        
+        return[y,(player+1)%4,story,points2]
+    }
+    
+    
+    player_to_3dboard(player1,player2,player3,player4){
+    var b = math.zeros([4,5,5]);
+    for (var j=0;j<player1.length;j++){
+    	var x = player1[j];
+    var column = x%5;
+    var row = (x-column)/5;
+    b[0][row][column] = 1;
+    }
+    for (var j=0;j<player2.length;j++){
+    var x = player2[j];
+    var column = x%5;
+    var row = (x-column)/5;
+    b[1][row][column] = 1;
+    }
+    for (var j=0;j<player3.length;j++){
+    var x = player3[j];
+    var column = x%5;
+    var row = (x-column)/5;
+    b[2][row][column] = 1;
+    }
+    for (var j=0;j<player4.length;j++){
+    var x = player4[j];
+    var column = x%5;
+    var row = (x-column)/5;
+    b[3][row][column] = 1;
+    }
+    
+    return b;
+    
+    }
+ }	 
+ 
+//Coach (execute a game)
+class Game{
+
+	constructor(structure,mcts)
+	{this.mcts = mcts;
+	this.structure = structure;
+	this.turn= 0;
+	this.points= [0,0,0,0];
+	this.player1= [21,23,17];
+	this.player2= [9,13,19];
+	this.player3= [1,3,7];
+	this.player4=[5,15,11];
+	this.pick= [0,0,0];//Cell picked,picked or not,player picked
+	this.story = {};
+	this.player_finished = true;
+	
+	
+}
+	
+	executeEpisode(){
+		
+	this.mcts.Qsa = [{},{},{},{}];
+    this.mcts.Nsa = [{},{},{},{}];
+    this.mcts.Ns = [{},{},{},{}];
+    this.mcts.Ps = [{},{},{},{}];
+    this.mcts.Es = [{},{},{},{}];
+    this.mcts.Vs = [{},{},{},{}];	
+	
+	
+	this.board = this.structure.getInitBoard();
+	this.turn= 0;
+	this.points= [0,0,0,0];
+	this.player1= [21,23,17];
+	this.player2= [9,13,19];
+	this.player3= [1,3,7];
+	this.player4=[5,15,11];
+	this.pick= [0,0,0]; //Cell picked,picked or not,player picked
+	this.story = {};
+	this.story[this.board] = 1;
+	this.ended = false;
+	
+	this.episodeStep = 0;
+	
+	this.loop_game();
+	}
+	
+	loop_game(){this.episodeStep +=1;
+		if(this.structure.gameEnded(this.board,this.story,this.points)[1]==1){
+    		this.ended=true;
+    		console.log(this.points,'pooooooooooints')
+    		
+    	return this.points;}
+		if (this.turn !=play_as && model_loaded &&this.player_finished
+			&&this.ended==false){
+		console.log(this.board,'board');
+		
+		this.player_finished = false;
+		
+		var pi = this.mcts.getActionProb(this.board,this.story,this.turn,this.points);
+		const max = Math.max(...pi);
+    	var bestAs = [];
+    	pi.forEach((item, index) => item === max ? bestAs.push(index): null);
+    	var action  = bestAs[Math.floor(Math.random() * bestAs.length)];
+    	move(action);
+    	console.log(action,'action taken was su puta madre');
+    	this.board = this.structure.player_to_3dboard(this.player1,this.player2,
+    		this.player3,this.player4);
+    	
+    	if (this.story.hasOwnProperty(this.board)){
+        this.story[this.board]+=1;
+        }
+        else {this.story[this.board]=1;}
+    	
+    	this.player_finished = true;
+    	if(this.structure.gameEnded(this.board,this.story,this.points)[1]==1){
+    		this.ended=true;
+    		
+    		console.log(this.points,'pooooooooooints')
+    	return this.points;}
+    	
+    }
+    
+    reset2 = setTimeout(this.loop_game.bind(this),600);}
+}
+
+
+//--- The main program
+//Load the animation tilesheet
+async function load_game() {
+    await loadModel();
+    wrapper = new wrapper(model);
+    structure = new Structure();
+    mcts = new MCTS (structure,wrapper);
+game = new Game(structure,mcts);
+console.log('juego_cargado');
+model_loaded = true;
+}
+
+
+load_game();
+
+function exec(){
+	
+if (model_loaded){game.executeEpisode();}
+else{setTimeout(exec,600)}
+};
+
+function reset(q){
+	if (model_loaded){
+		play_as = q;
+		
+		clearTimeout(reset2);
+		clearTimeout(update2);
+
+		monsterObjects = [];
+		monsterCanvases = [];
+		monsterDrawingSurfaces = [];
+		buildMap();
+		updateAnimation();
+		
+		
+	setTimeout(exec,600);}
+}
+
+exec();
+
+
+
+
+
+
+
+
+var image = new Image();
+image.addEventListener("load", loadHandler, false);
+image.src = monster.IMAGE;
+//The number of rows and columns and the size of each cell
+var ROWS = 5;
+var COLUMNS = 5;
+var SIZE = monster.SIZE;
+var SPACE = 0; 
+//Arrays for the monsters, their canvases, and their drawing surfaces
+var monsterObjects = [];
+var monsterCanvases = [];
+var monsterDrawingSurfaces = [];
+//Game variables
+var monstersHit = 0;
+//Get a referene to the output
+var output = document.querySelector("#output");
+function loadHandler()
+{
+ //Plot the grid of monsters
+ buildMap();
+ 
+ //Start the animation loop
+ updateAnimation();
+}
+function buildMap()
+
+{
+	
+ for(var row = 0; row < ROWS; row++)
+ {
+ 	 
+ for(var column = 0; column < COLUMNS; column++)
+ {
+ 	 if ((row==0&&column==0)|(row==4&&column==0)|(row==0&&column==4)|(row==4&&column==4)){var bad = true;}
+ 	 else{var bad = false;}
+ //Create a single new monster object, give it a random time, display its
+ //first frame and push it into an array
+ var newMonsterObject = Object.create(monster);
+ //initboard
+ if(row==0&&column==0){newMonsterObject.currentframe=20}
+ if(row==0&&column==4){newMonsterObject.currentframe=20}
+ if(row==4&&column==0){newMonsterObject.currentframe=20}
+ if(row==4&&column==4){newMonsterObject.currentframe=20}
+ 
+ if(row==0&&column==1){newMonsterObject.currentframe=2;newMonsterObject.prevframe=2}
+ if(row==0&&column==2){newMonsterObject.currentframe=20;newMonsterObject.prevframe=20;}
+ if(row==0&&column==3){newMonsterObject.currentframe=2,newMonsterObject.prevframe=2;}
+ if(row==1&&column==0){newMonsterObject.currentframe=3,newMonsterObject.prevframe=3;}
+ if(row==1&&column==1){newMonsterObject.currentframe=20,newMonsterObject.prevframe=20;}
+ if(row==1&&column==2){newMonsterObject.currentframe=2;newMonsterObject.prevframe=2;}
+ if(row==1&&column==3){newMonsterObject.currentframe=20;newMonsterObject.prevframe=20;}
+ if(row==1&&column==4){newMonsterObject.currentframe=1;newMonsterObject.prevframe=1;}
+ if(row==2&&column==0){newMonsterObject.currentframe=20;newMonsterObject.prevframe=20;}
+ if(row==2&&column==1){newMonsterObject.currentframe=3;newMonsterObject.prevframe=3;}
+ if(row==2&&column==2){newMonsterObject.currentframe=20;newMonsterObject.prevframe=20;}
+ if(row==2&&column==3){newMonsterObject.currentframe=1;newMonsterObject.prevframe=1;}
+ if(row==2&&column==4){newMonsterObject.currentframe=20;newMonsterObject.prevframe=20;}
+ if(row==3&&column==0){newMonsterObject.currentframe=3;newMonsterObject.prevframe=3;}
+ if(row==3&&column==1){newMonsterObject.currentframe=20;newMonsterObject.prevframe=20;}
+ if(row==3&&column==2){newMonsterObject.currentframe=0;newMonsterObject.prevframe=0;}
+ if(row==3&&column==3){newMonsterObject.currentframe=20;newMonsterObject.prevframe=20;}
+ if(row==3&&column==4){newMonsterObject.currentframe=1;newMonsterObject.prevframe=1;}
+ if(row==4&&column==1){newMonsterObject.currentframe=0;newMonsterObject.prevframe=0;}
+ if(row==4&&column==2){newMonsterObject.currentframe=20;newMonsterObject.prevframe=20;}
+ if(row==4&&column==3){newMonsterObject.currentframe=0;newMonsterObject.prevframe=0;}
+ if (bad){ monsterObjects.push([]);}
+ else{ monsterObjects.push(newMonsterObject);}
+
+
+ //Create a canvas tag for each monster and add it to the <div id="stage"> tag,
+ //position it, add a mousedown listener and push it into an array
+ var canvas = document.createElement("canvas");
+ canvas.setAttribute("width", SIZE);
+ canvas.setAttribute("height", SIZE);
+
+
+ stage.appendChild(canvas);
+ canvas.style.top = row * (SIZE + SPACE)  + "px";
+ canvas.style.left = column * (SIZE + SPACE)+ math.floor(($("#stage").width() -5*SIZE)/2) + "px";
+ canvas.addEventListener("mousedown", mousedownHandler, false);
+ 
+ monsterCanvases.push(canvas); 
+ //Create a drawing surface and push it into the drawingSurfaces array
+ var drawingSurface = canvas.getContext("2d");
+ monsterDrawingSurfaces.push(drawingSurface);
+ }
+ }
+
+}
+
+//[1,2,3,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,21,22,23]
+function updateAnimation()
+{
+ //Set a timer to call updateAnimation every 120 milliseconds
+ //while the timer is greater than zero.
+ if(true)
+ {
+ update2 = setTimeout(updateAnimation, 60);
+ }
+ //Loop through all the monsters in the monsters array and call
+ //their own updateAnimation methods
+ for(var i = 0; i < monsterObjects.length; i++)
+ 	 
+ 	 
+ {if (i==0|i==4|i==20|i==24){}
+ 	 else{
+ monsterObjects[i].updateAnimation(i);}
+ }
+
+ //check for the end of the game
+
+ //Render the animation
+ render();
+}
+function endGame()
+{
+ //Stop the gameTimer
+ gameTimer.stop();
+ //Remove the mousedown event listeners from the canvas tags so that they can't be clicked
+ for(var i = 0; i < monsterCanvases.length; i++)
+ {
+ var canvas = monsterCanvases[i];
+ canvas.removeEventListener("mousedown", mousedownHandler, false);
+ }
+}
+
+//possible spaces
+function spaces(cell)
+{var row = Math.floor(cell/5);
+var column = Math.round(cell%5);
+
+var lista = [];
+var row1 = row-2;var column1 = column+1;
+if (row1 >=0&&row1<5&&column1>=0&&column1<5){lista.push(row1*5+column1);}
+row1 = row-1; column1 = column+2;
+if (row1 >=0&&row1<5&&column1>=0&&column1<5){lista.push(row1*5+column1);}
+row1 = row+1; column1 = column+2;
+if (row1 >=0&&row1<5&&column1>=0&&column1<5){lista.push(row1*5+column1);}
+row1 = row+2; column1 = column+1;
+if (row1 >=0&&row1<5&&column1>=0&&column1<5){lista.push(row1*5+column1);}
+row1 = row+2; column1 = column-1;
+if (row1 >=0&&row1<5&&column1>=0&&column1<5){lista.push(row1*5+column1);}
+row1 = row+1; column1 = column-2;
+if (row1 >=0&&row1<5&&column1>=0&&column1<5){lista.push(row1*5+column1);}
+row1 = row-1; column1 = column-2;
+if (row1 >=0&&row1<5&&column1>=0&&column1<5){lista.push(row1*5+column1);}
+row1 = row-2; column1 = column-1;
+if (row1 >=0&&row1<5&&column1>=0&&column1<5){lista.push(row1*5+column1);}
+console.log(lista);
+return lista;
+}
+
+function mousedownHandler(event)
+{
+ //Find out which canvas was clicked
+ var theCanvasThatWasClicked = event.target;
+  //Search the monsterCanvases array for a canvas that matches the one that's been clicked
+ for(var i = 0; i < monsterCanvases.length; i++)
+ {
+ if(monsterCanvases[i] === theCanvasThatWasClicked)
+ {
+ var monster = monsterObjects[i];
+console.log(i,'i');
+console.log(game.player1,'player1');
+console.log(game.player2,'player2');
+console.log(game.player3,'player3');
+console.log(game.player4,'player4');
+ 	
+ 	 console.log(game.turn,'turn');
+ 	 if(game.pick[1]==1){game.pick[1]=2}
+ if(game.pick[1]==0)
+ {
+ if (game.player1.includes(i)&&game.turn==0)
+ 	 {console.log('picked player 1');
+ 	 	 monster.currentframe=8;
+ 	 game.pick[1]=1;
+ 	 game.pick[0]=i;
+ 	 game.pick[2]=1;
+ 
+ 	 for (const x of spaces(i))
+	{ 	 	 if (x>0&&x<24&&(x)!=4&&(x)!=20){
+ 	 if(game.player2.includes(x)){monsterObjects[x].prevframe=monsterObjects[x].currentframe;monsterObjects[x].currentframe=13}
+ 	 else if(game.player3.includes(x)){monsterObjects[x].prevframe=monsterObjects[x].currentframe;monsterObjects[x].currentframe=14;}
+ 	 else if(game.player4.includes(x)){monsterObjects[x].prevframe=monsterObjects[x].currentframe;monsterObjects[x].currentframe=15;}
+ 	 	 else if(!game.player1.includes(x)) {monsterObjects[x].prevframe=monsterObjects[x].currentframe;monsterObjects[x].currentframe=18;}}
+ 	 }
+ 	 }
+ 
+ else if(game.player2.includes(i)&&game.turn==1)
+ 	 {monster.currentframe=9;
+ 	 game.pick[1]=1;
+ 	 game.pick[0]=i;
+ 	 game.pick[2]=2;
+ 	  for (const x of spaces(i))
+	{ 	 	 if (x>0&&x<24&&(x)!=4&&(x)!=20){
+ 	 if(game.player1.includes(x)){monsterObjects[x].prevframe=monsterObjects[x].currentframe;monsterObjects[x].currentframe=12;}
+ 	 else if(game.player3.includes(x)){monsterObjects[x].prevframe=monsterObjects[x].currentframe;monsterObjects[x].currentframe=14;}
+ 	 else if(game.player4.includes(x)){monsterObjects[x].prevframe=monsterObjects[x].currentframe;monsterObjects[x].currentframe=15;}
+ 	 	 else if(!game.player2.includes(x)){monsterObjects[x].prevframe=monsterObjects[x].currentframe;monsterObjects[x].currentframe=18;}}
+ 	 }}
+ else if(game.player3.includes(i)&&game.turn==2)
+ 	 {monster.currentframe=10;
+ 	 game.pick[1]=1;
+ 	 game.pick[0]=i;
+ 	 game.pick[2]=3;
+ 	  for (const x of spaces(i))
+	{ 	 	 if (x>0&&x<24&&(x)!=4&&(x)!=20){
+ 	 if(game.player1.includes(x)){monsterObjects[x].prevframe=monsterObjects[x].currentframe;monsterObjects[x].currentframe=12;}
+ 	 else if(game.player2.includes(x)){monsterObjects[x].prevframe=monsterObjects[x].currentframe;monsterObjects[x].currentframe=13;}
+ 	 else if(game.player4.includes(x)){monsterObjects[x].prevframe=monsterObjects[x].currentframe;monsterObjects[x].currentframe=15;}
+ 	 	 else if(!game.player3.includes(x)){monsterObjects[x].prevframe=monsterObjects[x].currentframe;monsterObjects[x].currentframe=18;}}
+ 	 }}
+ else if(game.player4.includes(i)&&game.turn==3)
+ 	 {monster.currentframe=11;
+ 	 game.pick[1]=1;
+ 	 game.pick[0]=i;
+ 	 game.pick[2]=4;
+ 	  for (const x of spaces(i))
+	{ 	 	 if (x>0&&x<24&&(x)!=4&&(x)!=20){
+ 	 if(game.player2.includes(x)){monsterObjects[x].prevframe=monsterObjects[x].currentframe;monsterObjects[x].currentframe=13;}
+ 	 else if(game.player3.includes(x)){monsterObjects[x].prevframe=monsterObjects[x].currentframe;monsterObjects[x].currentframe=14;}
+ 	 else if(game.player1.includes(x)){monsterObjects[x].prevframe=monsterObjects[x].currentframe;monsterObjects[x].currentframe=12;}
+ 	 	 else if(!game.player4.includes(x)){monsterObjects[x].prevframe=monsterObjects[x].currentframe;monsterObjects[x].currentframe=18;}}
+ 	 }}
+ 
+ }
+  if(game.pick[1]==2)
+  	  {var lista = spaces(game.pick[0]);
+  	  	  for (const x of spaces(game.pick[0])){
+ 	 	 	 if (x>0&&x<24&&x!=i&&(x)!=4&&(x)!=20){
+ 	 monsterObjects[x].currentframe=monsterObjects[x].prevframe;}
+ 	 		 }
+ 	 //player1
+  	 if (game.player1.includes(i))
+ 	 	{if (game.pick[2]==1)
+ 	 	 {monsterObjects[game.pick[0]].currentframe=monsterObjects[game.pick[0]].prevframe}
+ 		 if (game.pick[2]==2&&lista.includes(i))
+ 		 {monsterObjects[game.pick[0]].currentframe=20;
+ 		  monsterObjects[i].currentframe=1;
+ 		  monsterObjects[i].prevframe=1;
+ 		 removeItemAll(game.player2, game.pick[0]);
+ 		 removeItemAll(game.player1, i);
+ 		 game.player2.push(i);
+ 		 game.turn=(game.turn+1)%4;
+ 		 game.points[game.pick[2]-1] = game.points[game.pick[2]-1]+1;
+ 		 game.board = game.structure.player_to_3dboard(game.player1,game.player2,
+    		game.player3,game.player4)
+    	 if (game.story.hasOwnProperty(game.board)){
+        game.story[game.board]+=1;
+        }
+        else {game.story[game.board]=1;}
+ 		 }
+ 		 if (game.pick[2]==3&&lista.includes(i))
+ 		 {monsterObjects[game.pick[0]].currentframe=20;
+ 		  monsterObjects[i].currentframe=2;
+ 		  monsterObjects[i].prevframe=2;
+ 		 removeItemAll(game.player3, game.pick[0]);
+ 		 removeItemAll(game.player1, i);
+ 		 game.player3.push(i);
+ 		 game.turn=(game.turn+1)%4;
+ 		 game.points[game.pick[2]-1] = game.points[game.pick[2]-1]+1;
+ 		 game.board = game.structure.player_to_3dboard(game.player1,game.player2,
+    		game.player3,game.player4)
+    	 if (game.story.hasOwnProperty(game.board)){
+        game.story[game.board]+=1;
+        }
+        else {game.story[game.board]=1;}
+ 		 }
+ 		 if (game.pick[2]==4&&lista.includes(i))
+ 		 {monsterObjects[game.pick[0]].currentframe=20;
+ 		  monsterObjects[i].currentframe=3;
+ 		  monsterObjects[i].prevframe=3;
+ 		 removeItemAll(game.player4, game.pick[0]);
+ 		 removeItemAll(game.player1, i);
+ 		 game.player4.push(i);
+ 		 game.turn=(game.turn+1)%4;
+ 		 game.points[game.pick[2]-1] = game.points[game.pick[2]-1]+1;
+ 		 game.board = game.structure.player_to_3dboard(game.player1,game.player2,
+    		game.player3,game.player4)
+    	 if (game.story.hasOwnProperty(game.board)){
+        game.story[game.board]+=1;
+        }
+        else {game.story[game.board]=1;}
+ 		 }
+ 	 	 	 
+ 	 	 game.pick=[0,0,0];
+ 	 	}
+ 	 //player2
+ 	 else if (game.player2.includes(i))
+ 	 	{if (game.pick[2]==2)
+ 	 	 {monsterObjects[game.pick[0]].currentframe=monsterObjects[game.pick[0]].prevframe}
+ 		 if (game.pick[2]==1&&lista.includes(i))
+ 		 {monsterObjects[game.pick[0]].currentframe=20;
+ 		  monsterObjects[i].currentframe=0;
+ 		  monsterObjects[i].prevframe=0;
+ 		 removeItemAll(game.player1, game.pick[0]);
+ 		 removeItemAll(game.player2, i);
+ 		 game.player1.push(i);
+ 		 game.turn=(game.turn+1)%4;
+ 		 game.points[game.pick[2]-1] = game.points[game.pick[2]-1]+1;
+ 		 game.board = game.structure.player_to_3dboard(game.player1,game.player2,
+    		game.player3,game.player4)
+    	 if (game.story.hasOwnProperty(game.board)){
+        game.story[game.board]+=1;
+        }
+        else {game.story[game.board]=1;}
+ 		 }
+ 		 if (game.pick[2]==3&&lista.includes(i))
+ 		 {monsterObjects[game.pick[0]].currentframe=20;
+ 		  monsterObjects[i].currentframe=2;
+ 		  monsterObjects[i].prevframe=2;
+ 		 removeItemAll(game.player3, game.pick[0]);
+ 		 removeItemAll(game.player2, i);
+ 		 game.player3.push(i);
+ 		 game.turn=(game.turn+1)%4;
+ 		 game.points[game.pick[2]-1] = game.points[game.pick[2]-1]+1;
+ 		 game.board = game.structure.player_to_3dboard(game.player1,game.player2,
+    		game.player3,game.player4)
+    	 if (game.story.hasOwnProperty(game.board)){
+        game.story[game.board]+=1;
+        }
+        else {game.story[game.board]=1;}
+ 		 }
+ 		 if (game.pick[2]==4&&lista.includes(i))
+ 		 {monsterObjects[game.pick[0]].currentframe=20;
+ 		  monsterObjects[i].currentframe=3;
+ 		  monsterObjects[i].prevframe=3;
+ 		 removeItemAll(game.player4, game.pick[0]);
+ 		 removeItemAll(game.player2, i);
+ 		 game.player4.push(i);
+ 		 game.turn=(game.turn+1)%4;
+ 		 game.points[game.pick[2]-1] = game.points[game.pick[2]-1]+1;
+ 		 game.board = game.structure.player_to_3dboard(game.player1,game.player2,
+    		game.player3,game.player4)
+    	 if (game.story.hasOwnProperty(game.board)){
+        game.story[game.board]+=1;
+        }
+        else {game.story[game.board]=1;}
+ 		 }
+ 	 	 	 
+ 	 	 game.pick=[0,0,0];
+ 	 	}
+ 	 	 
+ 	 	 //player3
+ 	 else if (game.player3.includes(i))
+ 	 	{if (game.pick[2]==3)
+ 	 	 {monsterObjects[game.pick[0]].currentframe=monsterObjects[game.pick[0]].prevframe}
+ 		 if (game.pick[2]==1&&lista.includes(i))
+ 		 {monsterObjects[game.pick[0]].currentframe=20;
+ 		  monsterObjects[i].currentframe=0;
+ 		  monsterObjects[i].prevframe=0;
+ 		 removeItemAll(game.player1, game.pick[0]);
+ 		 removeItemAll(game.player3, i);
+ 		 game.player1.push(i);
+ 		 game.turn=(game.turn+1)%4;
+ 		 game.points[game.pick[2]-1] = game.points[game.pick[2]-1]+1;
+ 		 game.board = game.structure.player_to_3dboard(game.player1,game.player2,
+    		game.player3,game.player4)
+    	 if (game.story.hasOwnProperty(game.board)){
+        game.story[game.board]+=1;
+        }
+        else {game.story[game.board]=1;}
+ 		 }
+ 		 if (game.pick[2]==2&&lista.includes(i))
+ 		 {monsterObjects[game.pick[0]].currentframe=20;
+ 		  monsterObjects[i].currentframe=1;
+ 		  monsterObjects[i].prevframe=1;
+ 		 removeItemAll(game.player2, game.pick[0]);
+ 		 removeItemAll(game.player3, i);
+ 		 game.player2.push(i);
+ 		 game.turn=(game.turn+1)%4;
+ 		 game.points[game.pick[2]-1] = game.points[game.pick[2]-1]+1;
+ 		 game.board = game.structure.player_to_3dboard(game.player1,game.player2,
+    		game.player3,game.player4)
+    	 if (game.story.hasOwnProperty(game.board)){
+        game.story[game.board]+=1;
+        }
+        else {game.story[game.board]=1;}
+ 		 }
+ 		 if (game.pick[2]==4&&lista.includes(i))
+ 		 {monsterObjects[game.pick[0]].currentframe=20;
+ 		  monsterObjects[i].currentframe=3;
+ 		  monsterObjects[i].prevframe=3;
+ 		 removeItemAll(game.player4, game.pick[0]);
+ 		 removeItemAll(game.player3, i);
+ 		 game.player4.push(i);
+ 		 game.turn=(game.turn+1)%4;
+ 		 game.points[game.pick[2]-1] = game.points[game.pick[2]-1]+1;
+ 		 game.board = game.structure.player_to_3dboard(game.player1,game.player2,
+    		game.player3,game.player4)
+    	 if (game.story.hasOwnProperty(game.board)){
+        game.story[game.board]+=1;
+        }
+        else {game.story[game.board]=1;}
+ 		 }
+ 	 	 	 
+ 	 	 game.pick=[0,0,0];
+ 	 	}
+ 	 	 
+ 	 		 //player4
+ 	 else if (game.player4.includes(i))
+ 	 	{if (game.pick[2]==4)
+ 	 	 {monsterObjects[game.pick[0]].currentframe=monsterObjects[game.pick[0]].prevframe}
+ 		 if (game.pick[2]==1&&lista.includes(i))
+ 		 {monsterObjects[game.pick[0]].currentframe=20;
+ 		  monsterObjects[i].currentframe=0;
+ 		  monsterObjects[i].prevframe=0;
+ 		 removeItemAll(game.player1, game.pick[0]);
+ 		 removeItemAll(game.player4, i);
+ 		 game.player1.push(i);
+ 		 game.turn=(game.turn+1)%4;
+ 		 game.points[game.pick[2]-1] = game.points[game.pick[2]-1]+1;
+ 		 game.board = game.structure.player_to_3dboard(game.player1,game.player2,
+    		game.player3,game.player4)
+    	 if (game.story.hasOwnProperty(game.board)){
+        game.story[game.board]+=1;
+        }
+        else {game.story[game.board]=1;}
+ 		 }
+ 		 if (game.pick[2]==2&&lista.includes(i))
+ 		 {monsterObjects[game.pick[0]].currentframe=20;
+ 		  monsterObjects[i].currentframe=1;
+ 		  monsterObjects[i].prevframe=1;
+ 		 removeItemAll(game.player2, game.pick[0]);
+ 		 removeItemAll(game.player4, i);
+ 		 game.player2.push(i);
+ 		 game.turn=(game.turn+1)%4;
+ 		 game.points[game.pick[2]-1] = game.points[game.pick[2]-1]+1;
+ 		 game.board = game.structure.player_to_3dboard(game.player1,game.player2,
+    		game.player3,game.player4)
+    	 if (game.story.hasOwnProperty(game.board)){
+        game.story[game.board]+=1;
+        }
+        else {game.story[game.board]=1;}
+ 		 }
+ 		 if (game.pick[2]==3&&lista.includes(i))
+ 		 {monsterObjects[game.pick[0]].currentframe=20;
+ 		  monsterObjects[i].currentframe=2;
+ 		  monsterObjects[i].prevframe=2;
+ 		 removeItemAll(game.player3, game.pick[0]);
+ 		 removeItemAll(game.player4, i);
+ 		 game.player3.push(i);
+ 		 game.turn=(game.turn+1)%4;
+ 		 game.points[game.pick[2]-1] = game.points[game.pick[2]-1]+1;
+ 		 game.board = game.structure.player_to_3dboard(game.player1,game.player2,
+    		game.player3,game.player4)
+    	 if (game.story.hasOwnProperty(game.board)){
+        game.story[game.board]+=1;
+        }
+        else {game.story[game.board]=1;}
+ 		 }
+ 	 	 	 
+ 	 	 game.pick=[0,0,0];
+ 	 	}
+ 	 	 
+ 	 	 //empty square
+ 	 	  else if (lista.includes(i)){
+ 		 if (game.pick[2]==1)
+ 		 {monsterObjects[game.pick[0]].currentframe=20;
+ 		  monsterObjects[i].currentframe=0;
+ 		  monsterObjects[i].prevframe=0;
+ 		 removeItemAll(game.player1, game.pick[0]);
+ 		 game.player1.push(i);
+ 		 game.turn=(game.turn+1)%4;
+ 		 game.board = game.structure.player_to_3dboard(game.player1,game.player2,
+    		game.player3,game.player4)
+    	 if (game.story.hasOwnProperty(game.board)){
+        game.story[game.board]+=1;
+        }
+        else {game.story[game.board]=1;}
+ 		 
+ 		 }
+ 		 if (game.pick[2]==2)
+ 		 {monsterObjects[game.pick[0]].currentframe=20;
+ 		  monsterObjects[i].currentframe=1;
+ 		   monsterObjects[i].prevframe=1;
+ 		 removeItemAll(game.player2, game.pick[0]);
+ 		 game.player2.push(i);
+ 		 game.turn=(game.turn+1)%4;
+ 		 game.board = game.structure.player_to_3dboard(game.player1,game.player2,
+    		game.player3,game.player4)
+    	 if (game.story.hasOwnProperty(game.board)){
+        game.story[game.board]+=1;
+        }
+        else {game.story[game.board]=1;}
+ 		 }
+ 		 if (game.pick[2]==3)
+ 		 {monsterObjects[game.pick[0]].currentframe=20;
+ 		  monsterObjects[i].currentframe=2;
+ 		   monsterObjects[i].prevframe=2;
+ 		 removeItemAll(game.player3, game.pick[0]);
+ 		 game.player3.push(i);
+ 		 game.turn=(game.turn+1)%4;
+ 		 game.board = game.structure.player_to_3dboard(game.player1,game.player2,
+    		game.player3,game.player4)
+    	 if (game.story.hasOwnProperty(game.board)){
+        game.story[game.board]+=1;
+        }
+        else {game.story[game.board]=1;}
+ 		 }
+ 		 if (game.pick[2]==4)
+ 		 {monsterObjects[game.pick[0]].currentframe=20;
+ 		  monsterObjects[i].currentframe=3;
+ 		   monsterObjects[i].prevframe=3;
+ 		 removeItemAll(game.player4, game.pick[0]);
+ 		 game.player4.push(i);
+ 		 game.turn=(game.turn+1)%4;
+ 		 game.board = game.structure.player_to_3dboard(game.player1,game.player2,
+    		game.player3,game.player4)
+    	 if (game.story.hasOwnProperty(game.board)){
+        game.story[game.board]+=1;
+        }
+        else {game.story[game.board]=1;}
+ 		 }
+ 	 	 	 
+ 	 	 game.pick=[0,0,0];
+ 	}
+ 		else{monsterObjects[game.pick[0]].currentframe=monsterObjects[game.pick[0]].prevframe;
+ 		game.pick=[0,0,0];}
+ 	 	  	 
+  	  
+  	   console.log(game.pick);}
+  }
+ }
+}
+
+function render()
+{
+ for(var i = 0; i < monsterObjects.length; i++)
+ {
+ //Get reference to the current monster and drawing surface
+ var monster = monsterObjects[i];
+ var drawingSurface = monsterDrawingSurfaces[i];
+ var canvas = monsterCanvases[i];
+ var column = i%5;
+ var row = math.floor((i-column)/5)
+ canvas.style.left = column * (SIZE + SPACE)+ math.floor(($("#stage").width() -5*SIZE)/2) + "px";
+
+
+ //Clear the current monster's canvas
+ drawingSurface.clearRect(0, 0, SIZE, SIZE);
+ //Draw the monster's current animation frame
+ drawingSurface.drawImage
+ (
+ image,
+ monster.sourceX, monster.sourceY, SIZE, SIZE,
+ 0, 0, SIZE, SIZE
+ );
+if (i==0){ monsterDrawingSurfaces[i].beginPath();
+ monsterDrawingSurfaces[i].lineWidth = 20;
+monsterDrawingSurfaces[i].moveTo(0, 120);
+monsterDrawingSurfaces[i].lineTo(120, 120);
+monsterDrawingSurfaces[i].lineTo(120, 0);
+monsterDrawingSurfaces[i].stroke();}
+
+if (i==1){ monsterDrawingSurfaces[i].beginPath();
+ monsterDrawingSurfaces[i].lineWidth = 20;
+monsterDrawingSurfaces[i].moveTo(0, 0);
+monsterDrawingSurfaces[i].lineTo(120, 0);
+monsterDrawingSurfaces[i].stroke();}
+
+if (i==2){ monsterDrawingSurfaces[i].beginPath();
+ monsterDrawingSurfaces[i].lineWidth = 20;
+monsterDrawingSurfaces[i].moveTo(0, 0);
+monsterDrawingSurfaces[i].lineTo(120, 0);
+monsterDrawingSurfaces[i].stroke();}
+
+if (i==3){ monsterDrawingSurfaces[i].beginPath();
+ monsterDrawingSurfaces[i].lineWidth = 20;
+monsterDrawingSurfaces[i].moveTo(0, 0);
+monsterDrawingSurfaces[i].lineTo(120, 0);
+monsterDrawingSurfaces[i].stroke();}
+
+if (i==4){ monsterDrawingSurfaces[i].beginPath();
+ monsterDrawingSurfaces[i].lineWidth = 20;
+monsterDrawingSurfaces[i].moveTo(0, 0);
+monsterDrawingSurfaces[i].lineTo(0, 120);
+monsterDrawingSurfaces[i].lineTo(120, 120);
+monsterDrawingSurfaces[i].stroke();}
+
+if (i==5){ monsterDrawingSurfaces[i].beginPath();
+ monsterDrawingSurfaces[i].lineWidth = 20;
+monsterDrawingSurfaces[i].moveTo(0, 0);
+monsterDrawingSurfaces[i].lineTo(0, 120);
+monsterDrawingSurfaces[i].stroke();}
+
+if (i==9){ monsterDrawingSurfaces[i].beginPath();
+ monsterDrawingSurfaces[i].lineWidth = 20;
+monsterDrawingSurfaces[i].moveTo(120, 0);
+monsterDrawingSurfaces[i].lineTo(120, 120);
+monsterDrawingSurfaces[i].stroke();}
+
+if (i==10){ monsterDrawingSurfaces[i].beginPath();
+ monsterDrawingSurfaces[i].lineWidth = 20;
+monsterDrawingSurfaces[i].moveTo(0, 0);
+monsterDrawingSurfaces[i].lineTo(0, 120);
+monsterDrawingSurfaces[i].stroke();}
+
+if (i==14){ monsterDrawingSurfaces[i].beginPath();
+ monsterDrawingSurfaces[i].lineWidth = 20;
+monsterDrawingSurfaces[i].moveTo(120, 0);
+monsterDrawingSurfaces[i].lineTo(120, 120);
+monsterDrawingSurfaces[i].stroke();}
+
+if (i==15){ monsterDrawingSurfaces[i].beginPath();
+ monsterDrawingSurfaces[i].lineWidth = 20;
+monsterDrawingSurfaces[i].moveTo(0, 0);
+monsterDrawingSurfaces[i].lineTo(0, 120);
+monsterDrawingSurfaces[i].stroke();}
+
+if (i==19){ monsterDrawingSurfaces[i].beginPath();
+ monsterDrawingSurfaces[i].lineWidth = 20;
+monsterDrawingSurfaces[i].moveTo(120, 0);
+monsterDrawingSurfaces[i].lineTo(120, 120);
+monsterDrawingSurfaces[i].stroke();}
+
+if (i==20){ monsterDrawingSurfaces[i].beginPath();
+ monsterDrawingSurfaces[i].lineWidth = 20;
+monsterDrawingSurfaces[i].moveTo(0, 0);
+monsterDrawingSurfaces[i].lineTo(120, 0);
+monsterDrawingSurfaces[i].lineTo(120, 120);
+monsterDrawingSurfaces[i].stroke();}
+
+if (i==21){ monsterDrawingSurfaces[i].beginPath();
+ monsterDrawingSurfaces[i].lineWidth = 20;
+monsterDrawingSurfaces[i].moveTo(0, 120);
+monsterDrawingSurfaces[i].lineTo(120, 120);
+monsterDrawingSurfaces[i].stroke();}
+
+if (i==22){ monsterDrawingSurfaces[i].beginPath();
+ monsterDrawingSurfaces[i].lineWidth = 20;
+monsterDrawingSurfaces[i].moveTo(0, 120);
+monsterDrawingSurfaces[i].lineTo(120, 120);
+monsterDrawingSurfaces[i].stroke();}
+
+if (i==23){ monsterDrawingSurfaces[i].beginPath();
+ monsterDrawingSurfaces[i].lineWidth = 20;
+monsterDrawingSurfaces[i].moveTo(0, 120);
+monsterDrawingSurfaces[i].lineTo(120, 120);
+monsterDrawingSurfaces[i].stroke();}
+
+if (i==24){ monsterDrawingSurfaces[i].beginPath();
+ monsterDrawingSurfaces[i].lineWidth = 20;
+monsterDrawingSurfaces[i].moveTo(120, 0);
+monsterDrawingSurfaces[i].lineTo(0, 0);
+monsterDrawingSurfaces[i].lineTo(0, 120);
+monsterDrawingSurfaces[i].stroke();}
+
+  }
+}
+
+
+//click with numbers
+function move(a){
+	var initial_col =a%5;
+	var b = math.floor(a/5);
+	var initial_row = b%5;
+	b = math.floor(b/5);
+	var i = initial_row*5+initial_col;
+	 if (b ==0){final_row=initial_row-2;final_col =initial_col+1; }
+	 else if(b ==1){final_row=initial_row-1;final_col =initial_col+2;}
+	 else if(b ==2){final_row=initial_row+1;final_col =initial_col+2;}
+	 else if(b ==3){final_row=initial_row+2;final_col =initial_col+1;}
+	 else if(b ==4){final_row=initial_row+2;final_col =initial_col-1;}
+	 else if(b ==5){final_row=initial_row+1;final_col =initial_col-2;}
+	 else if(b ==6){final_row=initial_row-1;final_col =initial_col-2;}
+	 else if(b ==7){final_row=initial_row-2;final_col =initial_col-1;}
+
+ var monster = monsterObjects[i];
+console.log(i,'i');
+console.log(game.player1,'player1');
+console.log(game.player2,'player2');
+console.log(game.player3,'player3');
+console.log(game.player4,'player4');
+ 	
+ 	 console.log(game.turn,'turn');
+ 
+ if(game.pick[1]==0)
+ {
+ if (game.player1.includes(i)&&game.turn==0)
+ 	 {console.log('picked player 1');
+ 	 	 monster.currentframe=8;
+ 	 game.pick[1]=1;
+ 	 game.pick[0]=i;
+ 	 game.pick[2]=1;
+ 
+ 	 for (const x of spaces(i))
+	{ 	 	 if (x>0&&x<24&&(x)!=4&&(x)!=20){
+ 	 if(game.player2.includes(x)){monsterObjects[x].prevframe=monsterObjects[x].currentframe;monsterObjects[x].currentframe=13}
+ 	 else if(game.player3.includes(x)){monsterObjects[x].prevframe=monsterObjects[x].currentframe;monsterObjects[x].currentframe=14;}
+ 	 else if(game.player4.includes(x)){monsterObjects[x].prevframe=monsterObjects[x].currentframe;monsterObjects[x].currentframe=15;}
+ 	 	 else if(!game.player1.includes(x)) {monsterObjects[x].prevframe=monsterObjects[x].currentframe;monsterObjects[x].currentframe=18;}}
+ 	 }
+ 	 }
+ 
+ else if(game.player2.includes(i)&&game.turn==1)
+ 	 {monster.currentframe=9;
+ 	 game.pick[1]=1;
+ 	 game.pick[0]=i;
+ 	 game.pick[2]=2;
+ 	  for (const x of spaces(i))
+	{ 	 	 if (x>0&&x<24&&(x)!=4&&(x)!=20){
+ 	 if(game.player1.includes(x)){monsterObjects[x].prevframe=monsterObjects[x].currentframe;monsterObjects[x].currentframe=12;}
+ 	 else if(game.player3.includes(x)){monsterObjects[x].prevframe=monsterObjects[x].currentframe;monsterObjects[x].currentframe=14;}
+ 	 else if(game.player4.includes(x)){monsterObjects[x].prevframe=monsterObjects[x].currentframe;monsterObjects[x].currentframe=15;}
+ 	 	 else if(!game.player2.includes(x)){monsterObjects[x].prevframe=monsterObjects[x].currentframe;monsterObjects[x].currentframe=18;}}
+ 	 }}
+ else if(game.player3.includes(i)&&game.turn==2)
+ 	 {monster.currentframe=10;
+ 	 game.pick[1]=1;
+ 	 game.pick[0]=i;
+ 	 game.pick[2]=3;
+ 	  for (const x of spaces(i))
+	{ 	 	 if (x>0&&x<24&&(x)!=4&&(x)!=20){
+ 	 if(game.player1.includes(x)){monsterObjects[x].prevframe=monsterObjects[x].currentframe;monsterObjects[x].currentframe=12;}
+ 	 else if(game.player2.includes(x)){monsterObjects[x].prevframe=monsterObjects[x].currentframe;monsterObjects[x].currentframe=13;}
+ 	 else if(game.player4.includes(x)){monsterObjects[x].prevframe=monsterObjects[x].currentframe;monsterObjects[x].currentframe=15;}
+ 	 	 else if(!game.player3.includes(x)){monsterObjects[x].prevframe=monsterObjects[x].currentframe;monsterObjects[x].currentframe=18;}}
+ 	 }}
+ else if(game.player4.includes(i)&&game.turn==3)
+ 	 {monster.currentframe=11;
+ 	 game.pick[1]=1;
+ 	 game.pick[0]=i;
+ 	 game.pick[2]=4;
+ 	  for (const x of spaces(i))
+	{ 	 	 if (x>0&&x<24&&(x)!=4&&(x)!=20){
+ 	 if(game.player2.includes(x)){monsterObjects[x].prevframe=monsterObjects[x].currentframe;monsterObjects[x].currentframe=13;}
+ 	 else if(game.player3.includes(x)){monsterObjects[x].prevframe=monsterObjects[x].currentframe;monsterObjects[x].currentframe=14;}
+ 	 else if(game.player1.includes(x)){monsterObjects[x].prevframe=monsterObjects[x].currentframe;monsterObjects[x].currentframe=12;}
+ 	 	 else if(!game.player4.includes(x)){monsterObjects[x].prevframe=monsterObjects[x].currentframe;monsterObjects[x].currentframe=18;}}
+ 	 }}
+ 
+ }
+ 
+ i = final_row*5+final_col;
+ monster = monsterObjects[i];
+  if(game.pick[1]==1)
+  	  {var lista = spaces(game.pick[0]);
+  	  	  for (const x of spaces(game.pick[0])){
+ 	 	 	 if (x>0&&x<24&&x!=i&&(x)!=4&&(x)!=20){
+ 	 monsterObjects[x].currentframe=monsterObjects[x].prevframe;}
+ 	 		 }
+ 	 //player1
+  	 if (game.player1.includes(i))
+ 	 	{if (game.pick[2]==1)
+ 	 	 {monsterObjects[game.pick[0]].currentframe=monsterObjects[game.pick[0]].prevframe}
+ 		 if (game.pick[2]==2&&lista.includes(i))
+ 		 {monsterObjects[game.pick[0]].currentframe=20;
+ 		  monsterObjects[i].currentframe=1;
+ 		  monsterObjects[i].prevframe=1;
+ 		 removeItemAll(game.player2, game.pick[0]);
+ 		 removeItemAll(game.player1, i);
+ 		 game.player2.push(i);
+ 		 game.turn=(game.turn+1)%4;
+ 		 game.points[game.pick[2]-1] = game.points[game.pick[2]-1]+1;
+ 		 }
+ 		 if (game.pick[2]==3&&lista.includes(i))
+ 		 {monsterObjects[game.pick[0]].currentframe=20;
+ 		  monsterObjects[i].currentframe=2;
+ 		  monsterObjects[i].prevframe=2;
+ 		 removeItemAll(game.player3, game.pick[0]);
+ 		 removeItemAll(game.player1, i);
+ 		 game.player3.push(i);
+ 		 game.turn=(game.turn+1)%4;
+ 		 game.points[game.pick[2]-1] = game.points[game.pick[2]-1]+1;
+ 		 }
+ 		 if (game.pick[2]==4&&lista.includes(i))
+ 		 {monsterObjects[game.pick[0]].currentframe=20;
+ 		  monsterObjects[i].currentframe=3;
+ 		  monsterObjects[i].prevframe=3;
+ 		 removeItemAll(game.player4, game.pick[0]);
+ 		 removeItemAll(game.player1, i);
+ 		 game.player4.push(i);
+ 		 game.turn=(game.turn+1)%4;
+ 		 game.points[game.pick[2]-1] = game.points[game.pick[2]-1]+1;
+ 		 }
+ 	 	 	 
+ 	 	 game.pick=[0,0,0];
+ 	 	}
+ 	 //player2
+ 	 else if (game.player2.includes(i))
+ 	 	{if (game.pick[2]==2)
+ 	 	 {monsterObjects[game.pick[0]].currentframe=monsterObjects[game.pick[0]].prevframe}
+ 		 if (game.pick[2]==1&&lista.includes(i))
+ 		 {monsterObjects[game.pick[0]].currentframe=20;
+ 		  monsterObjects[i].currentframe=0;
+ 		  monsterObjects[i].prevframe=0;
+ 		 removeItemAll(game.player1, game.pick[0]);
+ 		 removeItemAll(game.player2, i);
+ 		 game.player1.push(i);
+ 		 game.turn=(game.turn+1)%4;
+ 		 game.points[game.pick[2]-1] = game.points[game.pick[2]-1]+1;
+ 		 }
+ 		 if (game.pick[2]==3&&lista.includes(i))
+ 		 {monsterObjects[game.pick[0]].currentframe=20;
+ 		  monsterObjects[i].currentframe=2;
+ 		  monsterObjects[i].prevframe=2;
+ 		 removeItemAll(game.player3, game.pick[0]);
+ 		 removeItemAll(game.player2, i);
+ 		 game.player3.push(i);
+ 		 game.turn=(game.turn+1)%4;
+ 		 game.points[game.pick[2]-1] = game.points[game.pick[2]-1]+1;
+ 		 }
+ 		 if (game.pick[2]==4&&lista.includes(i))
+ 		 {monsterObjects[game.pick[0]].currentframe=20;
+ 		  monsterObjects[i].currentframe=3;
+ 		  monsterObjects[i].prevframe=3;
+ 		 removeItemAll(game.player4, game.pick[0]);
+ 		 removeItemAll(game.player2, i);
+ 		 game.player4.push(i);
+ 		 game.turn=(game.turn+1)%4;
+ 		 game.points[game.pick[2]-1] = game.points[game.pick[2]-1]+1;
+ 		 }
+ 	 	 	 
+ 	 	 game.pick=[0,0,0];
+ 	 	}
+ 	 	 
+ 	 	 //player3
+ 	 else if (game.player3.includes(i))
+ 	 	{if (game.pick[2]==3)
+ 	 	 {monsterObjects[game.pick[0]].currentframe=monsterObjects[game.pick[0]].prevframe}
+ 		 if (game.pick[2]==1&&lista.includes(i))
+ 		 {monsterObjects[game.pick[0]].currentframe=20;
+ 		  monsterObjects[i].currentframe=0;
+ 		  monsterObjects[i].prevframe=0;
+ 		 removeItemAll(game.player1, game.pick[0]);
+ 		 removeItemAll(game.player3, i);
+ 		 game.player1.push(i);
+ 		 game.turn=(game.turn+1)%4;
+ 		 game.points[game.pick[2]-1] = game.points[game.pick[2]-1]+1;
+ 		 }
+ 		 if (game.pick[2]==2&&lista.includes(i))
+ 		 {monsterObjects[game.pick[0]].currentframe=20;
+ 		  monsterObjects[i].currentframe=1;
+ 		  monsterObjects[i].prevframe=1;
+ 		 removeItemAll(game.player2, game.pick[0]);
+ 		 removeItemAll(game.player3, i);
+ 		 game.player2.push(i);
+ 		 game.turn=(game.turn+1)%4;
+ 		 game.points[game.pick[2]-1] = game.points[game.pick[2]-1]+1;
+ 		 }
+ 		 if (game.pick[2]==4&&lista.includes(i))
+ 		 {monsterObjects[game.pick[0]].currentframe=20;
+ 		  monsterObjects[i].currentframe=3;
+ 		  monsterObjects[i].prevframe=3;
+ 		 removeItemAll(game.player4, game.pick[0]);
+ 		 removeItemAll(game.player3, i);
+ 		 game.player4.push(i);
+ 		 game.turn=(game.turn+1)%4;
+ 		 game.points[game.pick[2]-1] = game.points[game.pick[2]-1]+1;
+ 		 }
+ 	 	 	 
+ 	 	 game.pick=[0,0,0];
+ 	 	}
+ 	 	 
+ 	 		 //player4
+ 	 else if (game.player4.includes(i))
+ 	 	{if (game.pick[2]==4)
+ 	 	 {monsterObjects[game.pick[0]].currentframe=monsterObjects[game.pick[0]].prevframe}
+ 		 if (game.pick[2]==1&&lista.includes(i))
+ 		 {monsterObjects[game.pick[0]].currentframe=20;
+ 		  monsterObjects[i].currentframe=0;
+ 		  monsterObjects[i].prevframe=0;
+ 		 removeItemAll(game.player1, game.pick[0]);
+ 		 removeItemAll(game.player4, i);
+ 		 game.player1.push(i);
+ 		 game.turn=(game.turn+1)%4;
+ 		 game.points[game.pick[2]-1] = game.points[game.pick[2]-1]+1;
+ 		 }
+ 		 if (game.pick[2]==2&&lista.includes(i))
+ 		 {monsterObjects[game.pick[0]].currentframe=20;
+ 		  monsterObjects[i].currentframe=1;
+ 		  monsterObjects[i].prevframe=1;
+ 		 removeItemAll(game.player2, game.pick[0]);
+ 		 removeItemAll(game.player4, i);
+ 		 game.player2.push(i);
+ 		 game.turn=(game.turn+1)%4;
+ 		 game.points[game.pick[2]-1] = game.points[game.pick[2]-1]+1;
+ 		 }
+ 		 if (game.pick[2]==3&&lista.includes(i))
+ 		 {monsterObjects[game.pick[0]].currentframe=20;
+ 		  monsterObjects[i].currentframe=2;
+ 		  monsterObjects[i].prevframe=2;
+ 		 removeItemAll(game.player3, game.pick[0]);
+ 		 removeItemAll(game.player4, i);
+ 		 game.player3.push(i);
+ 		 game.turn=(game.turn+1)%4;
+ 		 game.points[game.pick[2]-1] = game.points[game.pick[2]-1]+1;
+ 		 }
+ 	 	 	 
+ 	 	 game.pick=[0,0,0];
+ 	 	}
+ 	 	 
+ 	 	 //empty square
+ 	 	  else if (lista.includes(i)){
+ 		 if (game.pick[2]==1)
+ 		 {monsterObjects[game.pick[0]].currentframe=20;
+ 		  monsterObjects[i].currentframe=0;
+ 		  monsterObjects[i].prevframe=0;
+ 		 removeItemAll(game.player1, game.pick[0]);
+ 		 game.player1.push(i);
+ 		 game.turn=(game.turn+1)%4;
+ 		 }
+ 		 if (game.pick[2]==2)
+ 		 {monsterObjects[game.pick[0]].currentframe=20;
+ 		  monsterObjects[i].currentframe=1;
+ 		   monsterObjects[i].prevframe=1;
+ 		 removeItemAll(game.player2, game.pick[0]);
+ 		 game.player2.push(i);
+ 		 game.turn=(game.turn+1)%4;
+ 		 }
+ 		 if (game.pick[2]==3)
+ 		 {monsterObjects[game.pick[0]].currentframe=20;
+ 		  monsterObjects[i].currentframe=2;
+ 		   monsterObjects[i].prevframe=2;
+ 		 removeItemAll(game.player3, game.pick[0]);
+ 		 game.player3.push(i);
+ 		 game.turn=(game.turn+1)%4;
+ 		 }
+ 		 if (game.pick[2]==4)
+ 		 {monsterObjects[game.pick[0]].currentframe=20;
+ 		  monsterObjects[i].currentframe=3;
+ 		   monsterObjects[i].prevframe=3;
+ 		 removeItemAll(game.player4, game.pick[0]);
+ 		 game.player4.push(i);
+ 		 game.turn=(game.turn+1)%4;
+ 		 }
+ 	 	 	 
+ 	 	 game.pick=[0,0,0];
+ 	}
+ 		else{monsterObjects[game.pick[0]].currentframe=monsterObjects[game.pick[0]].prevframe;
+ 		game.pick=[0,0,0];}
+ 	 	  	 
+  	  
+  	   console.log(game.pick);
+}
+}
+
+
+
+
+</script> 
