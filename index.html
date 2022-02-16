@@ -625,7 +625,7 @@ class Game{
     	pi.forEach((item, index) => item === max ? bestAs.push(index): null);
     	var action  = bestAs[Math.floor(Math.random() * bestAs.length)];
     	move(action);
-    	console.log(action,'action taken was su puta madre');
+    	
     	this.board = this.structure.player_to_3dboard(this.player1,this.player2,
     		this.player3,this.player4);
     	
